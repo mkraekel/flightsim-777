@@ -1,0 +1,92 @@
+/* Boeing 777 CDU (Team D1). Scoped under .cdu-host. The unit is laid out at 460 x 700 and scaled
+   by cdu.js to fit #drawer-cdu. */
+
+.cdu-host { position: relative; overflow: hidden; min-height: 200px; }
+
+.cdu-bezel {
+  position: absolute; left: 50%; top: 50%; width: 460px; height: 700px;
+  transform-origin: 50% 50%;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 14px 14px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.18)),
+    var(--panel);
+  border: 1px solid var(--panel-edge);
+  box-shadow: var(--shadow-panel), inset 0 0 0 3px var(--panel-lo);
+  font-family: var(--font-legend);
+  color: var(--legend);
+  user-select: none; -webkit-user-select: none;
+  outline: none;
+}
+.cdu-bezel:focus-visible { box-shadow: var(--shadow-panel), inset 0 0 0 3px var(--panel-lo), 0 0 0 2px var(--ui-accent); }
+
+/* ---------- screen area ---------- */
+.cdu-screen-area { display: flex; align-items: stretch; justify-content: center; gap: 4px; }
+.cdu-glass {
+  --cdu-cell: 12.6px;
+  padding: 8px 8px; border-radius: 4px;
+  background: var(--glass);
+  border: 3px solid var(--bezel);
+  box-shadow: inset 0 0 12px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.1);
+}
+.cdu-screen { width: calc(24 * var(--cdu-cell)); display: flex; flex-direction: column; }
+.cdu-row {
+  height: 19.5px; display: flex; align-items: center; white-space: pre; overflow: hidden;
+  font-family: var(--font-avionics-mono); font-size: var(--cdu-fs, 20px); line-height: 1;
+}
+.cdu-row span { display: inline-block; white-space: pre; overflow: visible; text-align: left; }
+.cdu-row span.sm { font-size: calc(var(--cdu-fs, 20px) * 0.8); letter-spacing: calc(var(--cdu-cell) * 0.2); }
+.c-w { color: var(--av-white); }
+.c-g { color: var(--av-green); }
+.c-c { color: var(--av-cyan); }
+.c-m { color: var(--av-magenta); }
+.c-a { color: var(--av-amber); }
+
+.cdu-lsks { display: flex; flex-direction: column; justify-content: flex-start; padding-top: calc(8px + 3px + 19.5px * 2 - 2px); gap: calc(39px - 22px); }
+.cdu-lsk {
+  width: 24px; height: 22px; padding: 0; cursor: pointer; border-radius: 2px;
+  border: 1px solid #0b0c0d;
+  background: linear-gradient(180deg, #5a6066, #30353a);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 2px rgba(0,0,0,.6);
+  position: relative;
+}
+.cdu-lsk::after { content: ''; position: absolute; left: 6px; right: 6px; top: 10px; height: 2px; background: var(--legend-dim); }
+.cdu-lsk:active { transform: translateY(1px); }
+
+.cdu-lights { display: flex; flex-direction: column; justify-content: space-between; padding: 30px 0; width: 30px; }
+.cdu-light {
+  font-family: var(--font-legend); font-weight: 700; font-size: 9px; letter-spacing: .06em; text-align: center;
+  color: #4d5257; padding: 2px 0; border-radius: 2px; background: #1a1d20; box-shadow: inset 0 1px 2px rgba(0,0,0,.8);
+}
+.cdu-light.on { color: #1a1300; background: var(--annun-amber); box-shadow: 0 0 6px rgba(255,176,0,.6); }
+
+/* ---------- keys ---------- */
+.cdu-keys { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+.cdu-fn-row { display: flex; gap: 6px; align-items: flex-end; }
+.cdu-key {
+  position: relative; cursor: pointer; padding: 0;
+  border: 1px solid #0b0c0d; border-radius: 3px;
+  background: linear-gradient(180deg, #5d6369 0%, #3b4045 50%, #2c3034 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 -2px 0 rgba(0,0,0,.4), 0 2px 3px rgba(0,0,0,.6);
+  color: var(--legend); font-family: var(--font-legend); font-weight: 600; letter-spacing: .03em;
+  display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1;
+}
+.cdu-key:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 1px 1px rgba(0,0,0,.6); }
+.cdu-key.fn { width: 66px; height: 30px; font-size: 11.5px; white-space: normal; padding: 0 4px; }
+.cdu-key.num { width: 40px; height: 30px; font-size: 16px; border-radius: 50% / 40%; }
+.cdu-key.alpha { width: 40px; height: 30px; font-size: 15px; }
+.cdu-key.alpha.small { font-size: 11px; }
+.cdu-exec { width: 52px; height: 30px; font-size: 11.5px; margin-left: auto; flex-direction: column; gap: 3px; }
+.cdu-exec-bar { width: 30px; height: 5px; border-radius: 1px; background: #2a2a24; box-shadow: inset 0 1px 2px rgba(0,0,0,.8); }
+.cdu-exec-bar.on { background: #fffbe6; box-shadow: 0 0 6px #fffbe6, 0 0 12px rgba(255,251,230,.6); }
+.cdu-brightness {
+  margin-left: auto; width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 30%, var(--knob-hi), var(--knob) 70%);
+  box-shadow: 0 2px 3px rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: var(--legend-dim);
+}
+
+.cdu-pads { display: flex; gap: 14px; margin-top: 4px; align-items: flex-start; }
+.cdu-num { display: grid; grid-template-columns: repeat(3, 40px); gap: 5px; }
+.cdu-alpha { display: grid; grid-template-columns: repeat(5, 40px); gap: 5px; }

@@ -1,0 +1,206 @@
+/* Team C — glass displays (canvas hosts), lower EICAS page selector and the EFIS control panel. */
+
+/* ---------- display hosts: black glass, canvas letterboxed & centred ---------- */
+.av-host {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--glass);
+  min-width: 0;
+  min-height: 0;
+}
+.av-canvas {
+  display: block;
+  image-rendering: auto;
+  flex: none;
+}
+
+/* ---------- lower EICAS / MFD ---------- */
+.av-lower { display: flex; flex-direction: column; min-height: 0; }
+.mfd {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--panel-lo);
+  padding: 6px;
+  gap: 6px;
+}
+.mfd-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  flex: none;
+}
+.mfd-btn {
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .06em;
+  color: var(--legend);
+  background: linear-gradient(var(--panel-hi), var(--panel));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-panel);
+  padding: 4px 10px 3px;
+  min-width: 48px;
+  cursor: pointer;
+  position: relative;
+}
+.mfd-btn::before {               /* annunciator bar */
+  content: '';
+  position: absolute; left: 22%; right: 22%; top: 2px; height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,.08);
+}
+.mfd-btn.on::before { background: var(--annun-on); box-shadow: 0 0 4px var(--annun-on); }
+.mfd-btn:active { transform: translateY(1px); }
+.mfd-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 6px solid var(--bezel);
+  border-radius: var(--radius-m);
+}
+
+/* ---------- EFIS control panel ---------- */
+.efis {
+  --s: clamp(30px, min(34cqh, 10cqw), 80px);   /* knob diameter, scales with the host box */
+  flex-wrap: wrap;
+  align-content: center;
+  row-gap: 4px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 8px;
+  padding: 6px 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.18)),
+    var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  font-family: var(--font-legend);
+  color: var(--legend);
+  overflow: hidden;
+}
+#efis-l { container-type: size; }
+.efis-grp { display: flex; align-items: center; gap: 10px; }
+.efis-ovl { display: grid; grid-template-columns: repeat(4, auto); gap: 5px; }
+
+.efis-rot {
+  position: relative;
+  width: calc(var(--s) * 1.8);
+  height: calc(var(--s) * 1.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.efis-scale { position: absolute; inset: 0; pointer-events: none; }
+.efis-mark {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(var(--s) * -0.74)) rotate(calc(-1 * var(--a)));
+  background: none; border: 0; padding: 0 1px;
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: calc(var(--s) * 0.2);
+  line-height: 1;
+  color: var(--legend);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.efis-mark.sel { text-shadow: 0 0 6px rgba(255,255,255,.55); }
+.range .efis-mark { font-size: calc(var(--s) * 0.165); }
+.efis-knob {
+  --rot: 0deg;
+  position: relative;
+  width: calc(var(--s) * 0.92);
+  height: calc(var(--s) * 0.92);
+  border-radius: 50%;
+  cursor: ew-resize;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255,255,255,.07) 0 4deg, rgba(0,0,0,.25) 4deg 8deg),
+    radial-gradient(circle at 40% 30%, var(--knob-hi), var(--knob) 70%);
+  box-shadow: 0 3px 6px rgba(0,0,0,.65), inset 0 1px 1px rgba(255,255,255,.25), 0 0 0 2px var(--panel-edge);
+  display: flex; align-items: center; justify-content: center;
+}
+.efis-ptr {
+  position: absolute; inset: 0;
+  transform: rotate(var(--rot));
+  transition: transform .12s ease-out;
+  pointer-events: none;
+}
+.efis-ptr::after {
+  content: '';
+  position: absolute; left: 50%; top: 2px;
+  width: 3px; height: 26%;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--legend);
+}
+.efis-cap {
+  width: 52%; height: 52%;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-legend);
+  font-weight: 700;
+  font-size: calc(var(--s) * 0.15);
+  color: var(--legend);
+  background: radial-gradient(circle at 40% 30%, #3a3f44, #16181a 75%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.2), 0 1px 3px rgba(0,0,0,.7);
+  position: relative; z-index: 1;
+}
+.efis-cap:active, .efis-btn:active { transform: translateY(1px); }
+.efis-cap.on { color: var(--annun-on); text-shadow: 0 0 4px rgba(57,255,155,.6); }
+.efis-name {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: calc(var(--s) * 0.16);
+  letter-spacing: .08em;
+  color: var(--legend-dim);
+  pointer-events: none;
+}
+.efis-pair { display: flex; flex-direction: column; gap: 6px; }
+.efis-btn {
+  position: relative;
+  min-width: calc(var(--s) * 0.78);
+  padding: calc(var(--s) * 0.12) 6px calc(var(--s) * 0.08);
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: calc(var(--s) * 0.18);
+  letter-spacing: .05em;
+  color: var(--legend);
+  background: linear-gradient(var(--panel-hi), var(--panel-lo));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-panel);
+  cursor: pointer;
+}
+.efis-btn.sm { min-width: calc(var(--s) * 0.7); font-size: calc(var(--s) * 0.16); }
+.efis-btn::before {
+  content: '';
+  position: absolute; left: 25%; right: 25%; top: 2px; height: 2px; border-radius: 1px;
+  background: rgba(255,255,255,.07);
+}
+.efis-btn.on::before { background: var(--annun-on); box-shadow: 0 0 4px var(--annun-on); }
+
+/* Medium aspect (typical glareshield slot): knobs on one row, overlay buttons on a second row. */
+@container (max-aspect-ratio: 36/10) {
+  .efis { --s: clamp(30px, min(36cqh, 10.4cqw), 80px); }
+  .efis-ovl { flex-basis: 100%; grid-template-columns: repeat(7, auto); justify-content: center; }
+}
+/* Portrait host: stack the groups like the real panel. */
+@container (max-aspect-ratio: 13/10) {
+  .efis { flex-direction: column; flex-wrap: nowrap; justify-content: center; --s: clamp(30px, min(15cqh, 22cqw), 80px); }
+  .efis-ovl { flex-basis: auto; grid-template-columns: repeat(4, auto); }
+}

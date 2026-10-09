@@ -1,0 +1,360 @@
+/* Pedestal / control stand (Team D2). Uses the shared ow-* widgets from overhead.css. */
+
+.pdl-host { overflow: auto; background: var(--panel-lo); overscroll-behavior: contain; }
+.pdl {
+  --hh: 40px;                    /* lever handle height */
+  min-height: 100%;
+  font-family: var(--font-legend);
+  color: var(--legend);
+  background: var(--panel-lo);
+  padding: 0 0 12px;
+}
+.pdl-cap {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-align: center;
+  color: var(--legend); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.pdl-cap::before, .pdl-cap::after { content: ''; flex: 1; height: 1px; background: var(--legend); opacity: .55; }
+.pdl-sub { font-size: 9px; letter-spacing: .1em; color: var(--legend-dim); text-align: center; margin-top: 2px; }
+.pdl-hint { font-size: 9px; letter-spacing: .08em; color: var(--legend-dim); text-align: center; margin-top: 4px; }
+.pdl-row { display: flex; gap: 8px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.pdl-row.tight { gap: 4px; }
+
+/* ----------------------------------------------------------- glareshield */
+.pdl-glare {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #2a2e32, var(--panel-edge));
+  border-bottom: 1px solid #000;
+  box-shadow: 0 3px 8px rgba(0,0,0,.5);
+}
+.pdl-glare-title { font-size: 12px; font-weight: 700; letter-spacing: .2em; color: var(--legend-dim); }
+.pdl-masters { display: flex; gap: 8px; }
+.pdl-master {
+  width: 74px; height: 42px; padding: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 1px solid #000; border-radius: 3px; cursor: pointer;
+  background: linear-gradient(180deg, #1d1f21, #0c0d0e);
+  box-shadow: 0 2px 0 #050606, inset 0 1px 0 rgba(255,255,255,.07);
+  font-family: var(--font-legend); font-weight: 700; font-size: 11px; letter-spacing: .08em; line-height: 1.1;
+}
+.pdl-master.warn { color: rgba(255,43,43,.22); }
+.pdl-master.caut { color: rgba(255,176,0,.2); }
+.pdl-master.warn.lit {
+  color: #fff; background: radial-gradient(circle at 50% 40%, #ff5a4a, var(--av-red) 55%, #8a0d0d);
+  box-shadow: 0 0 14px rgba(255,43,43,.7), 0 2px 0 #050606;
+  text-shadow: 0 0 3px rgba(0,0,0,.6);
+}
+.pdl-master.caut.lit {
+  color: #1a1000; background: radial-gradient(circle at 50% 40%, #ffd35a, var(--annun-amber) 55%, #8a5f00);
+  box-shadow: 0 0 14px rgba(255,176,0,.7), 0 2px 0 #050606;
+}
+.pdl-master:active { transform: translateY(1px); }
+
+/* ------------------------------------------------------------- layout */
+.pdl-body {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(380px, 1fr) minmax(250px, 330px);
+  grid-template-areas: "fwd stand aft";
+  gap: 12px; padding: 12px;
+  align-items: start;
+}
+.pdl-fwd { grid-area: fwd; display: flex; flex-direction: column; gap: 10px; }
+.pdl-aft { grid-area: aft; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pdl-aft .pdl-xpdr, .pdl-aft > :last-child { grid-column: 1 / -1; }
+.pdl-fwd-cell, .pdl-aft-cell {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel) 35%, var(--panel-lo));
+  border: 1px solid var(--panel-edge); border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  padding: 6px 8px 8px;
+}
+.pdl-readouts { display: flex; flex-direction: column; gap: 3px; }
+
+/* the control stand: dark centre console with three lever groups */
+.pdl-stand {
+  grid-area: stand;
+  display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 6px;
+  padding: 10px 10px 12px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.35), transparent 8%, transparent 92%, rgba(0,0,0,.35)),
+    linear-gradient(180deg, var(--panel-hi), var(--panel) 25%, var(--panel-lo));
+  border: 1px solid var(--panel-edge); border-radius: 10px;
+  box-shadow: var(--shadow-panel), inset 0 0 30px rgba(0,0,0,.25);
+}
+.pdl-stand-left { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* ---------------------------------------------------- generic lever track */
+.pdl-lever-wrap { position: relative; height: 230px; width: 100%; min-width: 96px; }
+.pdl-sbwrap .pdl-lever-wrap { height: 190px; }
+.pdl-track {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 0;
+}
+.pdl-track::before {                        /* the slot in the stand */
+  content: ''; position: absolute; left: -5px; width: 10px;
+  top: calc(var(--hh) / 2 - 6px); bottom: calc(var(--hh) / 2 - 6px);
+  background: linear-gradient(90deg, #000, #16181a 50%, #000); border-radius: 5px;
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255,255,255,.08);
+}
+.pdl-lever {
+  position: absolute; left: 0; width: 64px; height: var(--hh); margin-left: -32px;
+  top: calc((1 - var(--p, 0)) * (100% - var(--hh)));
+  cursor: grab; touch-action: none;
+  transition: top 70ms linear;
+}
+.pdl-lever.grab { cursor: grabbing; transition: none; }
+.pdl-lever-shaft {
+  position: absolute; left: 50%; top: 50%; width: 8px; margin-left: -4px; height: 22px;
+  background: linear-gradient(90deg, #5b6268, #c9cdd0 50%, #5b6268); border-radius: 3px;
+}
+.pdl-scale { position: absolute; inset: 0; pointer-events: none; }
+.pdl-mark {
+  position: absolute; left: 0;
+  top: calc((1 - var(--p)) * (100% - var(--hh)) + var(--hh) / 2);
+  transform: translateY(-50%);
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--legend-dim);
+  white-space: nowrap;
+}
+.pdl-mark.sel { color: var(--legend); }
+
+/* speedbrake */
+.pdl-sb-grip {
+  position: absolute; inset: 6px 0; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .08em; color: #111;
+  background: linear-gradient(180deg, #f4f5f6, #b9bec2 60%, #8c9297);
+  border: 1px solid #000; box-shadow: 0 3px 4px rgba(0,0,0,.6);
+}
+.pdl-sb.armed .pdl-sb-grip { box-shadow: 0 0 0 2px var(--legend), 0 3px 4px rgba(0,0,0,.6); }
+.pdl-sbwrap .pdl-mark { left: 2px; }
+.pdl-sbwrap .pdl-mark.armed { color: var(--legend); }
+.pdl-sbwrap .pdl-track { left: 64%; }
+
+/* flaps */
+.pdl-flapwrap .pdl-track { left: 38%; }
+.pdl-flapwrap .pdl-mark { left: auto; right: 4px; pointer-events: auto; cursor: pointer; font-size: 12px; }
+.pdl-flapwrap .pdl-mark.gate::after { content: ' ⊐'; color: var(--legend-dim); font-size: 9px; }
+.pdl-flapwrap .pdl-scale { pointer-events: none; }
+.pdl-flap-grip {
+  position: absolute; left: 4px; right: 4px; top: 8px; height: 24px;
+  border-radius: 14px 30px 6px 6px / 12px 18px 6px 6px;     /* flap-airfoil shaped knob */
+  background: linear-gradient(180deg, #f2f3f4, #c2c6ca 55%, #8a9095);
+  border: 1px solid #000; box-shadow: 0 3px 4px rgba(0,0,0,.6);
+}
+.pdl-gate {
+  position: absolute; left: -16px; width: 32px; height: 3px;
+  top: calc((1 - var(--p)) * (100% - var(--hh)) + var(--hh) / 2 - 1px);
+  background: linear-gradient(90deg, transparent, var(--screw) 20%, var(--screw) 80%, transparent);
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------ thrust levers */
+.pdl-quad { display: flex; flex-direction: column; align-items: stretch; }
+.pdl-thr-wrap { --th: 270px; position: relative; height: var(--th); }
+.pdl-thr-wrap .pdl-scale::before {          /* reverse range band */
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+  height: calc(0.22 * (100% - var(--hh)) + var(--hh) / 2);
+  background: repeating-linear-gradient(135deg, rgba(255,43,43,.0) 0 6px, rgba(255,43,43,.12) 6px 9px);
+  border-top: 1px solid rgba(242,242,236,.4);
+}
+.pdl-thr-wrap .pdl-mark.idle { color: var(--legend); }
+.pdl-thr-wrap .pdl-mark.rev { color: rgba(255,120,110,.8); }
+.pdl-thr-slots { position: absolute; inset: 0; pointer-events: none; }
+.pdl-slot {
+  position: absolute; width: 10px; margin-left: -5px;
+  top: calc(var(--hh) / 2 - 6px); bottom: calc(var(--hh) / 2 - 6px);
+  background: linear-gradient(90deg, #000, #16181a 50%, #000); border-radius: 5px;
+  box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255,255,255,.08);
+}
+.pdl-slot:nth-child(1) { left: 40%; }
+.pdl-slot:nth-child(2) { left: 68%; }
+.pdl-thr-track { position: absolute; inset: 0; }
+.pdl-thr {
+  position: absolute; width: 74px; height: var(--hh); margin-left: -37px;
+  top: calc((1 - var(--p, 0)) * (var(--th) - var(--hh)));
+  cursor: grab; touch-action: none;
+  transition: top 70ms linear;
+}
+.pdl-thr:nth-child(1) { left: 40%; }
+.pdl-thr:nth-child(2) { left: 68%; }
+.pdl-thr.grab { cursor: grabbing; transition: none; }
+.pdl-thr-shaft {
+  position: absolute; left: 50%; top: 50%; width: 12px; margin-left: -6px;
+  height: calc(var(--p, 0) * (var(--th) - var(--hh)) + 6px);
+  background: linear-gradient(90deg, #3a3f44, #aab0b5 45%, #50565b);
+  border-radius: 3px;
+}
+.pdl-thr-knob {
+  position: absolute; inset: 0;
+  border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(180deg, #4a5056, #24282b 45%, #0e1012);
+  border: 1px solid #000;
+  box-shadow: 0 5px 8px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 6px;
+}
+.pdl-thr-num { font-size: 12px; font-weight: 700; color: var(--legend-dim); }
+.pdl-toga {
+  height: 20px; padding: 0 5px; border-radius: 3px; cursor: pointer;
+  font-family: var(--font-legend); font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  color: var(--legend); background: linear-gradient(180deg, #2a2d30, #090a0b);
+  border: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+.pdl-toga:active { transform: translateY(1px); }
+.pdl-atdisc {
+  position: absolute; top: 10px; width: 12px; height: 18px; padding: 0; cursor: pointer;
+  border: 1px solid #000; border-radius: 3px;
+  background: linear-gradient(90deg, #6a1414, #c22a2a 50%, #6a1414);
+}
+.pdl-atdisc.left { left: -11px; }
+.pdl-atdisc.right { right: -11px; }
+.pdl-rev {                                   /* piggy-back reverse lever on the front of the grip */
+  position: absolute; left: 14px; right: 14px; top: -7px; height: 8px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #8c9297, #4a5056);
+  border: 1px solid #000; border-bottom: 0;
+  transition: transform 80ms ease;
+}
+.pdl-thr.reversing .pdl-rev { transform: translateY(-6px); background: linear-gradient(180deg, #ff8c80, #a33); }
+
+/* -------------------------------------------------------------- parking brake */
+.pdl-parkwrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pdl-park {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: 0; background: none; padding: 0; cursor: pointer;
+}
+.pdl-park-handle {
+  width: 66px; height: 22px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #111;
+  background: linear-gradient(180deg, #f0f1f2, #b4b9bd 60%, #80868b);
+  border: 1px solid #000; box-shadow: 0 2px 0 #000;
+  transition: transform 80ms ease;
+}
+.pdl-park.set .pdl-park-handle { transform: translateY(-5px); box-shadow: 0 7px 0 #222, 0 8px 6px rgba(0,0,0,.6); }
+.pdl-park-lab { font-size: 9px; letter-spacing: .1em; color: var(--legend-dim); }
+
+/* ------------------------------------------------------------- gear lever */
+.pdl-gear-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pdl-gear-lab { display: flex; flex-direction: column; justify-content: space-between; height: 108px; font-size: 11px; font-weight: 700; color: var(--legend); }
+.pdl-gear {
+  position: relative; width: 44px; height: 116px; padding: 0; cursor: pointer;
+  border: 1px solid #000; border-radius: 6px;
+  background: linear-gradient(180deg, #24282b, #111315);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.08);
+}
+.pdl-gear-slot { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 6px; margin-left: -3px; border-radius: 3px; background: #000; }
+.pdl-gear-handle {
+  position: absolute; left: 50%; width: 38px; height: 38px; margin-left: -19px;
+  top: 72px; transition: top 220ms cubic-bezier(.4,1.4,.6,1);
+}
+.pdl-gear.up .pdl-gear-handle { top: 4px; }
+.pdl-gear-wheel {                            /* wheel-shaped knob */
+  position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, #2a2d30 0 22%, transparent 23%),
+    radial-gradient(circle at 40% 35%, #ffffff, #cfd3d6 45%, #7b8186 80%);
+  border: 2px solid #1b1e21; box-shadow: 0 4px 6px rgba(0,0,0,.7);
+}
+.pdl-gearind { display: flex; flex-direction: column; gap: 4px; }
+.pdl-gbox {
+  min-width: 46px; height: 22px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-avionics); font-size: 10px; font-weight: 700;
+  background: var(--glass); border: 1px solid var(--panel-edge); color: var(--av-grey);
+}
+.pdl-gbox.down { color: var(--av-green); border-color: var(--av-green); }
+.pdl-gbox.up { color: var(--av-white); border-color: rgba(255,255,255,.5); }
+.pdl-gbox.transit {
+  border-color: var(--av-amber);
+  background: repeating-linear-gradient(45deg, var(--glass) 0 4px, rgba(255,176,0,.75) 4px 6px);
+}
+
+/* ------------------------------------------------------- fuel control switches */
+.pdl-fcs-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.pdl-fcs-legend { display: flex; flex-direction: column; justify-content: space-between; height: 86px; font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.pdl-fcs {
+  position: relative; width: 40px; height: 104px; padding: 0; cursor: pointer;
+  border: 1px solid #000; border-radius: 5px; background: linear-gradient(180deg, #202326, #0d0f10);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.9);
+}
+.pdl-fcs-fire {
+  position: absolute; left: 4px; right: 4px; top: 4px; height: 16px; border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; letter-spacing: .08em; color: rgba(255,43,43,.25); background: #140303;
+}
+.pdl-fcs-fire.lit { color: #fff; background: var(--av-red); box-shadow: 0 0 10px var(--av-red); }
+.pdl-fcs-lever {
+  position: absolute; left: 7px; right: 7px; height: 22px; top: 70px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e9ebec, #9da3a8 55%, #5f666b);
+  border: 1px solid #000; box-shadow: 0 3px 4px rgba(0,0,0,.7);
+  transition: top 120ms ease;
+}
+.pdl-fcs.run .pdl-fcs-lever { top: 26px; }
+.pdl-fcs-lab { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; font-size: 9px; color: var(--legend-dim); }
+
+/* -------------------------------------------------------- guarded switches */
+.pdl-gsw {
+  position: relative; width: 36px; height: 52px; padding: 0; cursor: pointer;
+  border: 1px solid #000; border-radius: 4px; background: #121416;
+}
+.pdl-gsw-lever {
+  position: absolute; left: 50%; top: 8px; width: 10px; height: 20px; margin-left: -5px; border-radius: 4px;
+  background: linear-gradient(90deg, #6d747a, #e7eaec 45%, #5b6268); transition: top 90ms ease;
+}
+.pdl-gsw.cut .pdl-gsw-lever { top: 26px; }
+.pdl-guard {
+  position: absolute; inset: -2px; border-radius: 5px;
+  background: repeating-linear-gradient(135deg, rgba(200,30,30,.88) 0 6px, rgba(30,10,10,.88) 6px 12px);
+  border: 1px solid #000; transform-origin: 50% 0; transition: transform 140ms ease;
+}
+.pdl-gsw.open .pdl-guard { transform: scaleY(.18); }
+
+/* ----------------------------------------------------------- fire handles */
+.pdl-fire {
+  width: 58px; height: 30px; padding: 0; cursor: pointer;
+  border: 1px solid #000; border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, #3a3e42, #17191b);
+  color: var(--legend); font-family: var(--font-legend); font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  box-shadow: 0 2px 0 #000, inset 0 1px 0 rgba(255,255,255,.12);
+  transition: transform 100ms ease;
+}
+.pdl-fire.lit { background: radial-gradient(circle at 50% 40%, #ff6a5a, var(--av-red) 60%, #7a0b0b); box-shadow: 0 0 12px rgba(255,43,43,.75); color: #fff; }
+.pdl-fire.pulled { transform: translateY(-6px); box-shadow: 0 8px 0 #222, 0 9px 6px rgba(0,0,0,.6); }
+.pdl-fire.disch .pdl-fire-t { text-decoration: underline; text-decoration-color: var(--annun-amber); }
+
+/* ------------------------------------------------------------ transponder */
+.pdl-xcode { display: flex; gap: 2px; align-self: center; padding: 3px; background: var(--glass); border: 1px solid var(--panel-edge); border-radius: 3px; }
+.pdl-xd {
+  width: 20px; height: 26px; padding: 0; cursor: pointer;
+  font-family: var(--font-avionics-mono); font-size: 16px; color: var(--lcd);
+  background: transparent; border: 0;
+}
+.pdl-xd:hover { background: rgba(255,210,122,.08); }
+
+/* ------------------------------------------------------------- rudder trim */
+.pdl-rt-scale {
+  position: relative; height: 16px; margin: 4px 8px 6px;
+  border-bottom: 1px solid var(--legend-dim);
+  background: linear-gradient(90deg, transparent 49.5%, var(--legend) 49.5% 50.5%, transparent 50.5%);
+}
+.pdl-rt-ind {
+  position: absolute; bottom: 0; width: 0; height: 0; margin-left: -6px;
+  border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid var(--legend);
+}
+.pdl-rt-btn {
+  font-family: var(--font-legend); font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  padding: 3px 8px; cursor: pointer; color: var(--legend);
+  background: linear-gradient(180deg, #2a2d30, #0e1012); border: 1px solid #000; border-radius: 3px;
+}
+
+/* -------------------------------------------------------------- responsive */
+@media (max-width: 1100px) {
+  .pdl-body { grid-template-columns: minmax(180px, 230px) 1fr; grid-template-areas: "fwd stand" "aft aft"; }
+  .pdl-aft { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .pdl-aft .pdl-xpdr, .pdl-aft > :last-child { grid-column: auto; }
+}
+@media (max-width: 700px) {
+  .pdl-body { grid-template-columns: 1fr; grid-template-areas: "stand" "fwd" "aft"; }
+  .pdl-stand { grid-template-columns: 1fr 1.5fr 1fr; }
+  .pdl-glare-title { display: none; }
+}

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D2 Controls Harness</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/overhead.css">
+<link rel="stylesheet" href="../styles/pedestal.css">
+<style>
+  body { overflow: auto; }
+  .hx { display: grid; grid-template-columns: 1fr 300px; gap: 10px; padding: 10px; }
+  .hx-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #drawer-overhead, #drawer-pedestal { border: 1px solid var(--ui-line); border-radius: 6px; }
+  #world { height: 70px; border-radius: 6px; background: linear-gradient(180deg, #2c5d93, #8db3d9 70%, #6b5a3e 71%); position: relative; }
+  #world span { position: absolute; left: 10px; top: 8px; font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
+  .hx-side { display: flex; flex-direction: column; gap: 10px; }
+  .hx-box { background: var(--glass); border: 1px solid var(--ui-line); border-radius: 6px; padding: 8px; font-family: var(--font-avionics); font-size: 12px; }
+  .hx-box h4 { margin: 0 0 6px; font: 600 11px var(--font-ui); color: var(--ui-muted); letter-spacing: .08em; }
+  .m-warning { color: var(--av-red); } .m-caution { color: var(--av-amber); }
+  .m-advisory { color: var(--av-amber); padding-left: 1ch; } .m-memo { color: var(--av-white); }
+  .hx-log { max-height: 160px; overflow: auto; color: var(--av-cyan); }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ui-bg); padding: 6px 12px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; }
+  #toast.show { opacity: 1; }
+  .hx-btn { font: 600 12px var(--font-ui); padding: 6px 10px; border-radius: 5px; border: 1px solid var(--ui-line); background: var(--ui-bg); cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="hx">
+  <div class="hx-main">
+    <div id="world"><span>#world — right-drag to look, Y = mouse yoke</span></div>
+    <div id="drawer-overhead" class="open"></div>
+    <div id="drawer-pedestal" class="open"></div>
+  </div>
+  <div class="hx-side">
+    <button class="hx-btn" id="snd">Enable sound</button>
+    <div class="hx-box"><h4>EICAS (sim.alerts.list)</h4><div id="eicas"></div></div>
+    <div class="hx-box"><h4>CONTROLS / STATE</h4><pre id="state" style="margin:0;white-space:pre-wrap"></pre></div>
+    <div class="hx-box"><h4>AURAL EVENTS</h4><div class="hx-log" id="log"></div></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script type="module">
+import { createSimState } from '../src/core/state.js';
+import { KT, FT, FPM, DEG, approach } from '../src/core/geo.js';
+import { initInput, stepInput } from '../src/input/input.js';
+import { initSystems, stepSystems } from '../src/systems/aircraftSystems.js';
+import { stepAlerts } from '../src/systems/alerts.js';
+import { initAudio, resumeAudio, stepAudio } from '../src/audio/audio.js';
+import { initOverhead, updateOverhead } from '../src/cockpit/overhead.js';
+import { initPedestal, updatePedestal } from '../src/cockpit/pedestal.js';
+
+const q = new URLSearchParams(location.search);
+const sim = createSimState();
+window.sim = sim;
+Object.assign(sim.ac.fuelKg, { L: 24000, C: 30000, R: 24000 });
+sim.ac.onGround = true; sim.ac.altMSL = 364 * FT; sim.surfaces.stabUnits = 4.5;
+sim.fmc.v1 = 155; sim.fmc.vr = 160;
+initSystems(sim, { coldDark: q.has('cold') });
+initInput(sim, document.getElementById('app') || document.body);
+initAudio(sim);
+initOverhead(sim, document.getElementById('drawer-overhead'));
+initPedestal(sim, document.getElementById('drawer-pedestal'));
+document.getElementById('snd').onclick = () => resumeAudio();
+
+const toastEl = document.getElementById('toast');
+let tt;
+sim.events.on('toast', ({ text }) => { toastEl.textContent = text; toastEl.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('show'), 1800); });
+const log = document.getElementById('log');
+sim.events.on('aural', (e) => { log.prepend(Object.assign(document.createElement('div'), { textContent: `${sim.time.toFixed(1)}  ${e.id}` })); });
+
+// --- scenario presets for screenshots ---
+const scene = q.get('scene');
+if (scene === 'warn') {           // takeoff config warning + engine fire
+  sim.controls.throttle = [0.75, 0.75]; sim.controls.flapLever = 0; sim.engines[1].fire = true;
+}
+if (scene === 'approach') {       // airborne, gear transit, speedbrake extended, reversers n/a
+  sim.ac.onGround = false; sim.ac.ra = 700 * FT; sim.ac.altMSL = 1064 * FT; sim.ac.cas = 180 * KT; sim.ac.tas = 182 * KT;
+  sim.controls.flapLever = 5; sim.controls.speedbrakeLever = 0.5; sim.controls.autobrake = '3';
+  sim.controls.parkingBrake = false; sim.ap.atEngaged = true; sim.controls.throttle = [0.3, 0.3];
+  sim.systems._prev.airborneT = 600; sim.systems._prev.wasAir = true; sim.controls.gearLever = 'DOWN'; sim.surfaces.gear = 0.4;
+  setTimeout(() => { sim.ap.atEngaged = false; }, 300);
+}
+if (scene === 'reverse') { sim.controls.parkingBrake = false; sim.controls.reverse = [0.8, 0.8]; sim.ac.gs = 50; sim.ac.cas = 50; }
+
+// --- tiny fake physics so the panels animate ---
+function fakePhysics(dt) {
+  const c = sim.controls, s = sim.surfaces;
+  sim.engines.forEach((e, i) => {
+    const fuel = c.fuelControl[i] === 'RUN';
+    if (e.startState === 'STARTING') { e.n2 = fuel && e.n2 > 18 ? Math.min(63, e.n2 + 2.5 * dt) : Math.min(24, e.n2 + 3 * dt); e.ff = fuel && e.n2 > 18 ? 900 : 0; }
+    else if (e.startState === 'RUN') { e.n2 = approach(e.n2, 63 + 36 * c.throttle[i], 8, dt); e.ff = 1100 + 9000 * c.throttle[i]; }
+    else { e.n2 = Math.max(0, e.n2 - 4 * dt); e.ff = 0; }
+    e.n1 = Math.max(0, (e.n2 - 40) * 1.6);
+  });
+  const FL = [0, 1, 5, 15, 20, 25, 30];
+  s.flapsTarget = FL[c.flapLever]; s.flapsDeg = approach(s.flapsDeg, s.flapsTarget, 1.2, dt);
+  s.gearTarget = c.gearLever === 'DOWN' ? 1 : 0; s.gear = approach(s.gear, s.gearTarget, 0.1, dt);
+  s.speedbrake = approach(s.speedbrake, c.speedbrakeLever, 1, dt);
+  s.stabUnits = Math.max(0, Math.min(15, s.stabUnits + c.trimSwitch * 0.5 * dt));
+}
+
+const eicas = document.getElementById('eicas'), stateEl = document.getElementById('state');
+let last = performance.now(), frame = 0;
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000) * sim.simRate; last = now;
+  if (!sim.paused) {
+    sim.time += dt;
+    stepInput(sim, dt);
+    fakePhysics(dt);
+    stepSystems(sim, dt); stepAlerts(sim, dt); stepAudio(sim, dt);
+  }
+  updateOverhead(sim); updatePedestal(sim);
+  if (frame++ % 6 === 0) {
+    eicas.innerHTML = sim.alerts.list.map((m) => `<div class="m-${m.level}">${m.text}</div>`).join('') || '<span style="color:#666">—</span>';
+    const c = sim.controls;
+    stateEl.textContent = `pitch ${c.pitch.toFixed(2)} roll ${c.roll.toFixed(2)} yaw ${c.yaw.toFixed(2)} tiller ${c.tiller.toFixed(2)}
+thr ${c.throttle.map((t) => t.toFixed(2)).join('/')} rev ${c.reverse.map((t) => t.toFixed(2)).join('/')}
+flap lever ${c.flapLever} (${sim.surfaces.flapsDeg.toFixed(1)}°) gear ${c.gearLever} ${sim.surfaces.gear.toFixed(2)}
+sbrk ${c.speedbrakeLever.toFixed(2)} ${c.speedbrakeArmed ? 'ARMED' : ''} park ${c.parkingBrake} brk ${c.brakeL.toFixed(2)}
+trim ${c.trimSwitch} AB ${c.autobrake}  fuel ${(sim.systems.fuel.totalKg / 1000).toFixed(2)} t
+view ${sim.view.mode} look ${(sim.view.lookYaw / DEG).toFixed(0)}/${(sim.view.lookPitch / DEG).toFixed(0)} rate ${sim.simRate}x
+MW ${sim.alerts.masterWarning} MC ${sim.alerts.masterCaution} aural ${JSON.stringify(sim.alerts.aural)}`;
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

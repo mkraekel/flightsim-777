@@ -1,0 +1,235 @@
+/* Overhead panel (Team D2) + shared panel widgets (ow-*) also used by the pedestal.
+   Boeing look: cockpit-grey panels, white engraved/backlit legends, square push buttons
+   with backlit legend lights (white/amber), black rotary knobs, bat-handle toggles. */
+
+/* ------------------------------------------------------------ host & layout */
+.ohp-host {
+  overflow: auto;
+  background: var(--panel-lo);
+  overscroll-behavior: contain;
+}
+.ohp {
+  min-height: 100%;
+  padding: 10px 12px 14px;
+  font-family: var(--font-legend);
+  color: var(--legend);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.05), transparent 60%),
+    var(--panel-lo);
+}
+.ohp-head {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 2px 8px;
+  min-width: 0;
+}
+.ohp-head-title {
+  font-weight: 700; letter-spacing: .14em; font-size: 13px; color: var(--legend);
+  white-space: nowrap;
+}
+.ohp-status {
+  flex: 1; min-width: 0;
+  display: flex; gap: 8px; align-items: center;
+  background: var(--glass); border: 1px solid var(--panel-edge); border-radius: var(--radius-s);
+  padding: 3px 8px; overflow: hidden;
+}
+.ohp-status-lab { color: var(--legend-dim); font-size: 10px; letter-spacing: .1em; }
+.ohp-status-val {
+  font-family: var(--font-avionics-mono); font-size: 11px; color: var(--av-green);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ohp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.ohp-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ohp-wide { grid-column: 1 / -1; }
+
+/* panel section: grey plate with screws and a white title line */
+.ohp-sec {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel) 30%, var(--panel) 80%, var(--panel-lo));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  padding: 6px 10px 10px;
+}
+.ohp-sec::before, .ohp-sec::after {
+  content: ''; position: absolute; top: 5px; width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--screw), var(--panel-edge) 75%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08);
+}
+.ohp-sec::before { left: 5px; }
+.ohp-sec::after { right: 5px; }
+.ohp-title {
+  margin: 0 8px 8px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--legend);
+}
+.ohp-title::before, .ohp-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--legend); opacity: .75;
+}
+.ohp-body { display: flex; flex-direction: column; gap: 8px; }
+.ohp-row {
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+  justify-content: space-around; align-items: flex-start;
+}
+.ohp-row.tight { gap: 4px; justify-content: center; }
+.ohp-group {
+  border: 1px solid rgba(242,242,236,.35);
+  border-radius: var(--radius-s);
+  padding: 4px 6px 6px;
+}
+.ohp-group > .ohp-row { justify-content: center; gap: 6px 4px; }
+.ohp-gtitle {
+  font-size: 10px; letter-spacing: .14em; font-weight: 600; text-align: center;
+  color: var(--legend); margin-bottom: 4px;
+}
+.ohp-stack { display: flex; flex-direction: column; gap: 4px; align-items: stretch; justify-content: center; min-width: 86px; }
+.ohp-qty { margin-top: 2px; }
+.ohp-nowrap { flex-wrap: nowrap; justify-content: space-between; }
+.ohp-nowrap > .ow-ctl { min-width: 0; }
+
+/* ------------------------------------------------------------ control cell */
+.ow-ctl {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 52px; max-width: 86px;
+}
+.ow-ctl-label {
+  margin-top: 4px;
+  font-family: var(--font-legend); font-size: 10.5px; font-weight: 600; letter-spacing: .06em;
+  line-height: 1.05; text-align: center; color: var(--legend);
+  text-transform: uppercase;
+}
+.ow-ctl-sub { font-size: 9px; letter-spacing: .06em; color: var(--legend-dim); text-align: center; line-height: 1.05; }
+.ow-ctl-over { font-size: 9px; letter-spacing: .08em; color: var(--legend-dim); margin-bottom: 2px; }
+
+/* ------------------------------------------------------------ push button */
+.ow-pb {
+  width: 46px; height: 46px; padding: 3px;
+  border: 1px solid #000; border-radius: 3px; cursor: pointer;
+  background: linear-gradient(180deg, #34383c, #1c1f22 55%, #121416);
+  box-shadow: 0 3px 0 #0b0c0d, 0 4px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12);
+  transform: translateY(-2px);
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+.ow-pb.ow-pb-in {         /* alternate-action switch pushed in (flush) */
+  transform: translateY(0);
+  box-shadow: 0 1px 0 #0b0c0d, 0 1px 2px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.ow-pb:active { transform: translateY(1px); }
+.ow-pb-wide { width: 64px; }
+.ow-pb-face {
+  display: grid; grid-template-rows: 1fr 1fr; height: 100%;
+  background: #0c0d0e; border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.ow-pb-leg {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-legend); font-weight: 700; font-size: 10px; letter-spacing: .06em;
+  color: rgba(242,242,236,.13);   /* unlit legend still faintly visible through the lens */
+  line-height: 1;
+}
+.ow-pb-leg + .ow-pb-leg { border-top: 1px solid rgba(255,255,255,.04); }
+.ow-pb-leg.lit.ow-pb-white { color: var(--legend); text-shadow: 0 0 4px rgba(255,255,255,.75), 0 0 10px rgba(255,255,255,.35); }
+.ow-pb-leg.lit.ow-pb-amber { color: var(--annun-amber); text-shadow: 0 0 4px var(--annun-amber), 0 0 10px rgba(255,176,0,.45); }
+.ow-pb-leg.lit.ow-pb-green { color: var(--annun-on); text-shadow: 0 0 4px var(--annun-on); }
+.ow-pb-leg.ow-pb-amber:not(.lit) { color: rgba(255,176,0,.13); }
+.ow-pb-leg.mini {
+  font-size: 8.5px; padding: 1px 4px; background: #0c0d0e; border: 1px solid #000; border-radius: 2px;
+}
+
+/* stand-alone annunciator */
+.ow-lamp {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 52px; height: 18px; padding: 0 5px;
+  background: #0c0d0e; border: 1px solid #000; border-radius: 2px;
+  font-family: var(--font-legend); font-weight: 700; font-size: 10px; letter-spacing: .08em;
+  color: rgba(242,242,236,.13);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.8);
+}
+.ow-lamp.lit.ow-pb-white { color: var(--legend); text-shadow: 0 0 4px rgba(255,255,255,.7); }
+.ow-lamp.lit.ow-pb-amber { color: var(--annun-amber); text-shadow: 0 0 5px var(--annun-amber); }
+.ow-lamp.lit.ow-pb-red { color: var(--av-red); text-shadow: 0 0 6px var(--av-red); }
+.ow-lamp.lit.ow-pb-green { color: var(--annun-on); text-shadow: 0 0 5px var(--annun-on); }
+
+/* LCD readout */
+.ow-lcd {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  background: var(--glass); border: 1px solid var(--panel-edge); border-radius: 2px;
+  padding: 1px 5px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.9);
+  min-width: 0;
+}
+.ow-lcd-lab { font-family: var(--font-legend); font-size: 9px; letter-spacing: .08em; color: var(--legend-dim); white-space: nowrap; }
+.ow-lcd-val { font-family: var(--font-avionics-mono); font-size: 12px; color: var(--lcd); white-space: nowrap; }
+
+/* ------------------------------------------------------------ rotary knob */
+.ow-knob-wrap {
+  position: relative; width: 88px; height: 76px; cursor: pointer;
+  border-radius: 8px;
+}
+.ow-knob-small { width: 62px; height: 62px; }
+.ow-knob-dial { position: absolute; inset: 0; }
+.ow-knob-pos {
+  position: absolute; transform: translate(-50%, -50%);
+  font-family: var(--font-legend); font-size: 9.5px; font-weight: 600; letter-spacing: .04em;
+  color: var(--legend-dim); white-space: nowrap; pointer-events: none;
+}
+.ow-knob-pos.sel { color: var(--legend); }
+.ow-knob-cap {
+  position: absolute; left: 50%; top: 50%;
+  width: 36px; height: 36px; margin: -14px 0 0 -18px;   /* sit slightly low so the labels clear */
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 30%, rgba(255,255,255,.22), transparent 42%),
+    conic-gradient(from 0deg, #2b2f33, #121416, #2b2f33, #121416, #2b2f33);
+  border: 1px solid #000;
+  box-shadow: 0 3px 5px rgba(0,0,0,.6), 0 0 0 3px rgba(0,0,0,.25), inset 0 -2px 3px rgba(0,0,0,.6);
+  transition: transform 120ms ease;
+}
+.ow-knob-small .ow-knob-cap { width: 30px; height: 30px; margin: -11px 0 0 -15px; }
+.ow-knob-ptr {
+  position: absolute; left: 50%; top: 2px; width: 4px; height: 45%; margin-left: -2px;
+  background: var(--legend); border-radius: 2px;
+  box-shadow: 0 0 2px rgba(255,255,255,.5);
+}
+.ow-knob-wrap:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 0; }
+.ow-knob-lights { display: flex; gap: 3px; margin-bottom: 4px; }
+
+/* --------------------------------------------------------- bat-handle toggle */
+.ow-tg {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+}
+.ow-tg-pos { font-family: var(--font-legend); font-size: 9px; letter-spacing: .06em; color: var(--legend-dim); line-height: 1; }
+.ow-tg.on .ow-tg-up, .ow-tg:not(.on) .ow-tg-dn { color: var(--legend); }
+.ow-tg-base {
+  position: relative; width: 22px; height: 22px; border-radius: 50%; margin: 15px 0;
+  background: radial-gradient(circle at 40% 35%, #8a9096, #3a3f44 60%, #1b1e21);
+  border: 1px solid #000;
+  box-shadow: 0 2px 3px rgba(0,0,0,.6);
+}
+.ow-tg-lever {
+  position: absolute; left: 50%; top: 50%;
+  width: 8px; height: 22px; margin-left: -4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #6d747a, #e7eaec 45%, #9aa0a5 70%, #5b6268);
+  box-shadow: 0 1px 2px rgba(0,0,0,.7);
+  transform-origin: 50% 0;
+  transform: rotate(0deg);              /* down = OFF */
+  transition: transform 90ms ease;
+}
+.ow-tg-lever::after {                   /* knurled tip */
+  content: ''; position: absolute; left: -1px; right: -1px; bottom: -2px; height: 7px; border-radius: 4px;
+  background: linear-gradient(90deg, #7c8389, #f5f6f7 45%, #8d9399);
+}
+.ow-tg.on .ow-tg-lever { transform: rotate(180deg); }
+.ow-ctl-tg { min-width: 40px; }
+
+@media (max-width: 640px) {
+  .ohp { padding: 8px; }
+  .ohp-grid { grid-template-columns: 1fr; }
+  .ohp-status { display: none; }
+}

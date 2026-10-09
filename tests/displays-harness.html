@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B777 Displays Harness</title>
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/displays.css">
+<style>
+  body { background: #0b0d0f; overflow: auto; }
+  #cockpit { display: flex; flex-direction: column; gap: 10px; padding: 12px; min-width: 1200px; }
+  #glareshield { display: flex; gap: 10px; height: 150px; }
+  #efis-l { width: 470px; height: 150px; }
+  #mcp { flex: 1; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: var(--radius-m);
+         box-shadow: var(--shadow-panel); color: var(--legend-dim); font-family: var(--font-legend);
+         display: flex; align-items: center; justify-content: center; letter-spacing: .1em; }
+  #main-panel { display: grid; grid-template-columns: 430px 430px 190px 430px; justify-content: center; gap: 10px; background: var(--panel);
+                padding: 14px; border-radius: var(--radius-m); box-shadow: var(--shadow-panel); }
+  .bezel { background: var(--bezel); padding: 12px; border-radius: 10px; box-shadow: inset 0 0 0 2px #000, 0 2px 8px rgba(0,0,0,.7); }
+  .bezel > div { width: 100%; aspect-ratio: 1; }
+  #isfd-col { display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; }
+  #isfd { aspect-ratio: 1; }
+  #controls { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--font-ui); font-size: 13px; }
+  #controls button { background: var(--panel-hi); border: 1px solid var(--panel-edge); padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  #controls button.on { outline: 2px solid var(--ui-accent); }
+  #lower-row { display: grid; grid-template-columns: 1fr 520px 1fr; gap: 10px; }
+  #drawer-lower { height: 560px; border-radius: var(--radius-m); }
+</style>
+</head>
+<body>
+<div id="cockpit">
+  <div id="controls">
+    <span style="align-self:center;color:var(--ui-muted)">Scene:</span>
+    <button data-scene="approach">Approach</button><button data-scene="cruise">Cruise</button>
+    <button data-scene="takeoff">Takeoff</button><button data-scene="climb">Climb turn</button>
+    <button id="pause">Pause</button>
+  </div>
+  <div id="glareshield"><div id="efis-l"></div><div id="mcp">MCP (team D1)</div></div>
+  <div id="main-panel">
+    <div class="bezel"><div id="pfd"></div></div>
+    <div class="bezel"><div id="nd"></div></div>
+    <div id="isfd-col"><div class="bezel"><div id="isfd"></div></div></div>
+    <div class="bezel"><div id="eicas"></div></div>
+  </div>
+  <div id="lower-row"><div></div><div id="drawer-lower"></div><div></div></div>
+</div>
+<script type="module">
+import { createSimState } from '../src/core/state.js';
+import { DEG, KT, FT, FPM, NM, destination, wrap2pi, eulerToQuat } from '../src/core/geo.js';
+import { initDisplays, updateDisplays } from '../src/avionics/displays.js';
+
+const sim = createSimState();
+window.sim = sim;
+
+// --- airport + route data (degrees in airport data, radians in fmc.route) ---
+const rw25c = { id: '25C', lat: 50.04583, lon: 8.58694, hdgDeg: 249, lengthM: 4000, widthM: 45, ils: { freq: 110.1, ident: 'IFC', gsDeg: 3 } };
+const rw07c = { id: '07C', lat: 50.03263, lon: 8.53457, hdgDeg: 69, lengthM: 4000, widthM: 45 };
+const rw25l = { id: '25L', lat: 50.04110, lon: 8.58640, hdgDeg: 249, lengthM: 4000, widthM: 60 };
+const rw18 = { id: '18', lat: 50.03440, lon: 8.52590, hdgDeg: 180, lengthM: 4000, widthM: 45 };
+for (const r of [rw25c, rw07c, rw25l, rw18]) {
+  const e = destination(r.lat * DEG, r.lon * DEG, r.hdgDeg * DEG, r.lengthM);
+  r.endLat = e.lat / DEG; r.endLon = e.lon / DEG;
+}
+const EDDF = { icao: 'EDDF', name: 'Frankfurt am Main', elevFt: 364, magVarDeg: 3, lat: 50.0333, lon: 8.5706, runways: [rw25c, rw25l, rw18] };
+sim.fmc.origin = EDDF; sim.fmc.dest = EDDF;
+const wp = (ident, lat, lon, altFt = null) => ({ ident, lat: lat * DEG, lon: lon * DEG, altFt, spdKt: null });
+sim.fmc.route = [
+  wp('DF625', 50.0700, 8.8900, 5000), wp('ROLIS', 50.1350, 8.9600, 4000), wp('DF611', 50.1150, 8.8100, 4000),
+  wp('CF25C', 50.0790, 8.7230, 3000), wp('RW25C', 50.0458, 8.5869, 364),
+];
+Object.assign(sim.fmc, { v1: 152, vr: 158, v2: 165, vref: 149, toFlaps: 15, ldgFlaps: 30 });
+sim.ac.mass = 255000; sim.ac.magVar = 3 * DEG;
+sim.ac.fuelKg = { L: 12400, C: 2100, R: 12300 };
+sim.engines.forEach((e) => { e.running = true; e.startState = 'RUN'; });
+sim.env.timeOfDayH = 14.42; sim.env.qnhHpa = 1013.25; sim.env.baroHpa = 1013.25;
+
+const SCENES = {
+  approach: {
+    lat: 50.0905, lon: 8.7400, hdg: 249, alt: 2450, ra: 2070, cas: 162, vs: -780, pitch: 1.8, roll: -2.5, flaps: 20, gear: 1,
+    n1: 58, egt: 520, n2: 82, ff: 2600, thr: 0.36, wind: [230, 18],
+    ap: { apEngaged: true, modes: { at: 'SPD', roll: 'LOC', pitch: 'G/S', armedRoll: 'ROLLOUT', armedPitch: 'FLARE', ap: 'LAND 3' }, sel: { spdKt: 154, hdgDeg: 249, altFt: 5000 } },
+    ils: { valid: true, ident: 'IFC', freq: 110.10, crsRad: 249 * DEG, locDots: 0.35, gsDots: -0.45, distNm: 7.9 },
+    efis: { ndMode: 'MAP', ndRangeNm: 10, minimumsFt: 560, minsType: 'BARO', terr: false },
+    alerts: [{ text: 'AUTOPILOT', level: 'caution' }, { text: 'FUEL DISAGREE', level: 'advisory' }, { text: 'AUTOBRAKE 3', level: 'memo' }, { text: 'SEATBELTS ON', level: 'memo' }],
+    activeLeg: 4,
+  },
+  cruise: {
+    lat: 50.30, lon: 9.60, hdg: 236, alt: 35000, ra: 99999, cas: 268, mach: 0.84, vs: 0, pitch: 2.4, roll: 0, flaps: 0, gear: 0,
+    n1: 89.4, egt: 735, n2: 94.1, ff: 6800, thr: 0.78, wind: [285, 62], tempDev: 0,
+    ap: { apEngaged: true, modes: { at: 'SPD', roll: 'LNAV', pitch: 'VNAV PTH', armedRoll: '', armedPitch: '', ap: '' }, sel: { spdKt: 280, mach: 0.84, useMach: true, hdgDeg: 240, altFt: 35000 } },
+    ils: { valid: false }, efis: { ndMode: 'MAP', ndRangeNm: 80, minimumsFt: 200, minsType: 'BARO' }, std: true,
+    alerts: [{ text: 'TCAS OFF', level: 'advisory' }, { text: 'SEATBELTS ON', level: 'memo' }],
+    activeLeg: 0,
+  },
+  takeoff: {
+    lat: 50.0405, lon: 8.5700, hdg: 249, alt: 364, ra: 0, cas: 128, vs: 0, pitch: 0, roll: 0, flaps: 15, gear: 1, ground: true,
+    n1: 98.9, egt: 905, n2: 101.2, ff: 15200, thr: 0.97, wind: [240, 8],
+    ap: { apEngaged: false, modes: { at: 'HOLD', roll: 'TO/GA', pitch: 'TO/GA', armedRoll: 'LNAV', armedPitch: 'VNAV', ap: '' }, sel: { spdKt: 165, hdgDeg: 249, altFt: 5000 } },
+    ils: { valid: false }, efis: { ndMode: 'MAP', ndRangeNm: 20, minimumsFt: 200, minsType: 'RADIO' },
+    alerts: [{ text: 'PARKING BRAKE', level: 'warning' }, { text: 'APU RUNNING', level: 'memo' }],
+    activeLeg: 0,
+  },
+  climb: {
+    lat: 50.0200, lon: 8.4200, hdg: 300, alt: 3150, ra: 2350, cas: 205, vs: 2400, pitch: 12, roll: 22, flaps: 5, gear: 0,
+    n1: 95.5, egt: 860, n2: 98, ff: 12800, thr: 0.9, wind: [250, 22],
+    ap: { apEngaged: true, modes: { at: 'THR REF', roll: 'HDG SEL', pitch: 'VNAV SPD', armedRoll: 'LNAV', armedPitch: '', ap: '' }, sel: { spdKt: 220, hdgDeg: 20, altFt: 6000 } },
+    ils: { valid: false }, efis: { ndMode: 'MAP', ndRangeNm: 20, minimumsFt: 200, minsType: 'BARO', fpv: true },
+    alerts: [{ text: 'CONFIG GEAR', level: 'warning' }, { text: 'AIRSPEED LOW', level: 'caution' }, { text: 'HYD PRESS SYS C', level: 'caution' }, { text: 'BLEED LOSS', level: 'advisory' }],
+    activeLeg: 0,
+  },
+};
+
+let scene = new URLSearchParams(location.search).get('scene') || 'approach';
+let T0 = 0, paused = new URLSearchParams(location.search).has('still');
+
+function loadScene(name) {
+  scene = name; const s = SCENES[name];
+  Object.assign(sim.efis, { wxr: false, terr: false, fpv: false }, s.efis);
+  Object.assign(sim.ap, { fdL: true, fdR: true, atEngaged: true }, s.ap, { sel: { ...sim.ap.sel, useMach: false, ...s.ap.sel } });
+  sim.ap.modes = { ...s.ap.modes };
+  sim.nav.ils = { ...sim.nav.ils, ...s.ils };
+  sim.alerts.list = s.alerts.slice();
+  sim.env.baroStd = !!s.std;
+  sim.env.windDirDeg = s.wind[0]; sim.env.windKt = s.wind[1];
+  sim.fmc.activeLeg = s.activeLeg;
+  sim.ac.lat = s.lat * DEG; sim.ac.lon = s.lon * DEG;
+  T0 = sim.time;
+  document.querySelectorAll('[data-scene]').forEach((b) => b.classList.toggle('on', b.dataset.scene === name));
+}
+
+function animate(dt) {
+  const s = SCENES[scene], t = sim.time - T0;
+  const w = (a, f, ph = 0) => a * Math.sin(t * f + ph);
+  const ac = sim.ac;
+  const pitch = s.pitch + w(1.2, 0.5), roll = s.roll + w(4, 0.33);
+  const hdg = s.hdg + (s.ground ? 0 : t * (Math.tan(roll * DEG) * 9.81 / (s.cas * KT)) / DEG * 0.0 + w(2, 0.12));
+  ac.euler = { pitch: pitch * DEG, roll: roll * DEG, heading: wrap2pi(hdg * DEG) };
+  ac.quat = eulerToQuat(ac.euler.roll, ac.euler.pitch, ac.euler.heading);
+  ac.cas = (s.cas + w(6, 0.25) + (s.ground ? t * 2.2 : 0)) * KT;
+  ac.tas = ac.cas * (1 + s.alt / 1000 * 0.017);
+  ac.mach = s.mach ? s.mach + w(0.004, 0.25) : ac.tas / 340;
+  ac.vs = (s.vs + w(350, 0.4)) * FPM;
+  ac.altMSL = (s.alt + w(60, 0.2)) * FT + ac.vs * 0;
+  ac.h = ac.altMSL;
+  ac.ra = (s.ra + w(60, 0.2)) * FT;
+  ac.onGround = !!s.ground;
+  ac.gs = ac.tas - Math.cos((s.wind[0] - hdg) * DEG) * s.wind[1] * KT;
+  ac.track = ac.euler.heading + (s.ground ? 0 : 2.5 * DEG);
+  ac.fpa = Math.atan2(ac.vs, Math.max(1, ac.tas));
+  ac.alpha = (pitch * DEG) - ac.fpa;
+  ac.nz = 1 / Math.cos(roll * DEG);
+  ac.specificForce = [0, w(0.4, 0.7), -9.81];
+  // move along track
+  const p = destination(ac.lat, ac.lon, ac.track, ac.gs * dt);
+  ac.lat = p.lat; ac.lon = p.lon;
+  Object.assign(sim.surfaces, { flapsDeg: s.flaps, flapsTarget: s.flaps, gear: s.gear, gearTarget: s.gear,
+    elevator: w(3, 0.8) * DEG, aileron: w(8, 0.33) * DEG, rudder: w(2, 0.4) * DEG, spoilerRollL: Math.max(0, w(0.3, 0.33)), spoilerRollR: Math.max(0, -w(0.3, 0.33)), stabUnits: 5.2 });
+  sim.engines.forEach((e, i) => Object.assign(e, { n1: s.n1 + w(0.6, 0.5, i), egt: s.egt + w(8, 0.4, i), n2: s.n2 + w(0.3, 0.5, i), ff: s.ff + w(150, 0.5, i), oilP: 62, oilT: 104, vib: 0.4 + i * 0.2 }));
+  sim.controls.throttle = [s.thr, s.thr];
+  sim.ap.fd = { valid: true, pitchDeg: s.pitch + 1.2 + w(1, 0.3), rollDeg: s.roll + w(6, 0.2) };
+  if (s.ils.valid) { sim.nav.ils.locDots = s.ils.locDots + w(0.3, 0.15); sim.nav.ils.gsDots = s.ils.gsDots + w(0.3, 0.2); sim.nav.ils.distNm = Math.max(0, s.ils.distNm - t * 0.04); }
+}
+
+loadScene(scene);
+initDisplays(sim, {
+  pfdEl: document.getElementById('pfd'), ndEl: document.getElementById('nd'), eicasEl: document.getElementById('eicas'),
+  lowerEl: document.getElementById('drawer-lower'), isfdEl: document.getElementById('isfd'), efisEl: document.getElementById('efis-l'),
+});
+const qs = new URLSearchParams(location.search);
+if (qs.get('lower')) sim.efis.lowerPage = qs.get('lower');
+// e.g. ?efis=ndMode:APP,ctr:1,ndRangeNm:20 — overrides for screenshots
+for (const kv of (qs.get('efis') || '').split(',').filter(Boolean)) {
+  const [k, v] = kv.split(':'); sim.efis[k] = v === '1' ? true : v === '0' ? false : isNaN(+v) ? v : +v;
+}
+if (qs.get('efis')) SCENES[scene].efis = { ...SCENES[scene].efis, ...sim.efis };
+
+document.querySelectorAll('[data-scene]').forEach((b) => b.addEventListener('click', () => loadScene(b.dataset.scene)));
+document.getElementById('pause').addEventListener('click', () => { paused = !paused; });
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (!paused) { sim.time += dt; animate(dt); }
+  updateDisplays(sim, dt);
+  requestAnimationFrame(frame);
+}
+// when 'still' is requested, advance a few seconds so the trend vectors etc. have data
+if (paused) { for (let i = 0; i < 90; i++) { sim.time += 1 / 30; animate(1 / 30); } }
+requestAnimationFrame(frame);
+window.harnessReady = document.fonts.ready.then(() => new Promise((r) => setTimeout(r, 400)));
+</script>
+</body>
+</html>

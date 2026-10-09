@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autoflight Harness</title>
+<link rel="stylesheet" href="../styles/base.css">
+<link rel="stylesheet" href="../styles/mcp.css">
+<link rel="stylesheet" href="../styles/cdu.css">
+<style>
+  body { overflow: auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: auto 1fr; align-items: start; background: #15181b; }
+  #glare { grid-column: 1 / -1; background: #23272b; padding: 10px; border-radius: 6px; }
+  #mcp { width: 100%; height: 150px; }
+  #mcp-small { width: 760px; height: 90px; margin-top: 10px; }
+  #drawer-cdu { width: 460px; height: 700px; }
+  #fma { font-family: var(--font-avionics-mono); font-size: 14px; color: var(--av-green); background: #000; padding: 10px 14px; border-radius: 4px; white-space: pre; min-width: 520px; }
+  #fma .w { color: var(--av-white); } #fma .m { color: var(--av-magenta); }
+</style>
+</head>
+<body>
+<div id="glare"><div id="mcp"></div><div id="mcp-small"></div></div>
+<div id="drawer-cdu"></div>
+<div id="fma">loading…</div>
+<script type="module">
+import { createSimState } from '../src/core/state.js';
+import { DEG, RAD, KT, FT, FPM, G0, clamp, wrap2pi, destination } from '../src/core/geo.js';
+import { initFMC, stepFMC, buildDefaultRoute } from '../src/systems/fmc.js';
+import { initAFDS, stepAFDS, afdsAction } from '../src/systems/afds.js';
+import { stepNav } from '../src/systems/navradio.js';
+import { initMCP, updateMCP } from '../src/cockpit/mcp.js';
+import { initCDU, updateCDU, cduPress } from '../src/avionics/cdu.js';
+import { AIRPORTS, findAirport } from '../src/world/airports.js';
+
+const sim = createSimState();
+sim.fmc.airports = AIRPORTS;
+initFMC(sim); initAFDS(sim);
+const eddf = findAirport('EDDF'), egll = findAirport('EGLL');
+sim.events.emit('spawned', { airport: eddf, runway: eddf.runways.find((r) => r.id === '25C') });
+sim.fmc.dest = egll; buildDefaultRoute(sim, eddf, egll);
+sim.fmc.crzAltFt = 35000;
+sim.engines.forEach((e) => { e.running = true; e.ff = 3400; e.n1 = 92.4; });
+sim.ac.fuelKg = { L: 25000, C: 20000, R: 25000 }; sim.ac.mass = 285000; sim.env.timeOfDayH = 14.5;
+
+// --- tiny point-mass aircraft (same idea as tests/afds.test.mjs), cruising mid-route ---
+const r1 = sim.fmc.route[2];
+const a = { lat: r1.lat - 0.02, lon: r1.lon - 0.1, h: 24000 * FT, V: 230, gam: 0, theta: 2.5 * DEG, q: 0, phi: 0, p: 0, psi: 280 * DEG, n: 0.6 };
+sim.fmc.activeLeg = 3; sim.fmc.legFrom = { lat: r1.lat, lon: r1.lon }; sim.fmc.wasAirborne = true; sim.fmc.phase = 'CLIMB';
+sim.controls.throttle = [0.6, 0.6];
+function stepAc(dt) {
+  const o = sim.ap.out.active ? sim.ap.out : { pitch: 0, roll: 0 };
+  for (let i = 0; i < 2; i++) if (sim.ap.thrustCmd !== null) sim.controls.throttle[i] += clamp(sim.ap.thrustCmd - sim.controls.throttle[i], -0.25 * dt, 0.25 * dt);
+  a.n += ((sim.controls.throttle[0]) - a.n) * dt / 2.5;
+  const T = a.h < 11000 ? 288.15 - 0.0065 * a.h : 216.65, rho = 1.225 * Math.pow(T / 288.15, 4.256);
+  a.q += (o.pitch * 1.5 * G0 / (a.V + 120) - a.q) * dt / 0.6; a.p += (o.roll * 15 * DEG - a.p) * dt / 0.3;
+  a.theta += a.q * dt; a.phi += a.p * dt;
+  const qb = 0.5 * rho * a.V * a.V, cl = 0.2 + 5.6 * (a.theta - a.gam), nz = qb * 436.8 * cl / (285000 * G0);
+  const D = qb * 436.8 * (0.0165 + 0.0404 * (cl - 0.1) ** 2), Th = a.n * 1026000 * Math.pow(rho / 1.225, 0.8) * 0.8;
+  a.V += ((Th - D) / 285000 - G0 * Math.sin(a.gam)) * dt;
+  a.gam += G0 / a.V * (nz * Math.cos(a.phi) - Math.cos(a.gam)) * dt;
+  a.psi = wrap2pi(a.psi + G0 * nz * Math.sin(a.phi) / a.V * dt);
+  const p2 = destination(a.lat, a.lon, a.psi, a.V * Math.cos(a.gam) * dt); a.lat = p2.lat; a.lon = p2.lon; a.h += a.V * Math.sin(a.gam) * dt;
+  Object.assign(sim.ac, { lat: a.lat, lon: a.lon, h: a.h, altMSL: a.h, tas: a.V, cas: a.V * Math.sqrt(rho / 1.225), mach: a.V / Math.sqrt(1.4 * 287 * T),
+    vs: a.V * Math.sin(a.gam), fpa: a.gam, gs: a.V, track: a.psi, ra: a.h, onGround: false, euler: { roll: a.phi, pitch: a.theta, heading: a.psi }, omega: [a.p, a.q, 0] });
+}
+stepAc(0.01);
+initMCP(sim, document.getElementById('mcp'));
+afdsAction(sim, 'AP_ENGAGE'); afdsAction(sim, 'AT');
+afdsAction(sim, 'LNAV'); afdsAction(sim, 'VNAV');
+sim.ap.sel.altFt = 35000; sim.ap.sel.hdgDeg = 275;
+initCDU(sim, document.getElementById('drawer-cdu'));
+// second, smaller MCP instance only for the responsive screenshot (shares state; DOM-only)
+window.__sim = sim; window.__cdu = cduPress; window.__afds = afdsAction;
+
+const fma = document.getElementById('fma');
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (!window.__frozen) {
+    stepNav(sim, dt); stepFMC(sim, dt); stepAFDS(sim, dt);
+    for (let i = 0; i < 4; i++) stepAc(dt / 4);
+    sim.time += dt;
+  }
+  updateMCP(sim); updateCDU(sim);
+  const m = sim.ap.modes;
+  fma.innerHTML = `${(m.at || '').padEnd(8)}| ${(m.roll || '').padEnd(9)}| ${m.pitch}\n<span class="w">${''.padEnd(8)}| ${(m.armedRoll || '').padEnd(9)}| ${m.armedPitch}</span>\n${m.ap}\n` +
+    `<span class="w">ALT ${Math.round(a.h / FT)}  IAS ${Math.round(sim.ac.cas / KT)}  M${sim.ac.mach.toFixed(3)}  V/S ${Math.round(sim.ac.vs / FPM)}  HDG ${Math.round(a.psi * RAD)}</span>\n` +
+    `<span class="m">FD pitch ${sim.ap.fd.pitchDeg.toFixed(1)}  roll ${sim.ap.fd.rollDeg.toFixed(1)}  thr ${sim.ap.thrustCmd === null ? '--' : sim.ap.thrustCmd.toFixed(2)}</span>`;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+document.title = 'Autoflight Harness';
+window.__ready = true;
+</script>
+<script type="module">
+// render a second, scaled MCP into the small box (separate module instance via query string)
+const { initMCP, updateMCP } = await import('../src/cockpit/mcp.js?small');
+const wait = () => new Promise((r) => { const t = () => (window.__sim ? r() : setTimeout(t, 30)); t(); });
+await wait();
+initMCP(window.__sim, document.getElementById('mcp-small'));
+setInterval(() => updateMCP(window.__sim), 100);
+</script>
+</body>
+</html>

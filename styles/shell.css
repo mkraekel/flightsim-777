@@ -1,0 +1,225 @@
+/* Shell layout (Team B): 3D world, cockpit overlay (glareshield + main panel),
+   drawers, dock, HUD, toast. Colours/fonts only via base.css tokens. */
+
+:root {
+  /* cockpit overlay geometry; everything derives from these */
+  --ck-h: min(45vh, 31vw);                       /* overlay height (lower ~45 % of a 16:9/16:10 screen) */
+  --gs-h: calc(var(--ck-h) * 0.28);              /* glareshield strip */
+  --mp-h: calc(var(--ck-h) - var(--gs-h));       /* main instrument panel */
+  --du: min(calc(var(--mp-h) * 0.86), 21.5vw);   /* display unit (square) */
+  --du-bezel: calc(var(--du) * 0.055);
+  --isfd: calc(var(--du) * 0.44);
+  --panel-texture:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, var(--panel-hi), var(--panel) 38%, var(--panel-lo));
+}
+
+#app { position: fixed; inset: 0; overflow: hidden; background: var(--ui-bg-solid); }
+
+/* ------------------------------------------------------------------ 3D world */
+#world { position: absolute; inset: 0; }
+#world .cesium-widget, #world .cesium-widget canvas { width: 100%; height: 100%; }
+#world .cesium-widget canvas { display: block; }
+/* Attribution must stay visible: the bottom of the screen is covered by the panel. */
+#world .cesium-viewer-bottom { top: 2px; bottom: auto; left: 4px; right: auto; z-index: 3; opacity: .78; }
+#world .cesium-widget-credits { font-size: 10px; }
+body.booting #world { visibility: hidden; }
+
+/* ------------------------------------------------------------------ cockpit overlay */
+#cockpit {
+  position: absolute; left: 0; right: 0; bottom: 0; height: var(--ck-h);
+  z-index: 10; display: flex; flex-direction: column;
+  pointer-events: none;           /* children re-enable */
+}
+#cockpit > #glareshield, #cockpit > #main-panel { pointer-events: auto; }
+
+/* window sill shadow so the 3D view tucks under the coaming */
+#cockpit::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 3.2vh;
+  background: linear-gradient(to top, rgba(0,0,0,.55), transparent);
+  pointer-events: none;
+}
+
+#glareshield {
+  position: relative; height: var(--gs-h); flex: none;
+  display: grid; grid-template-columns: 27% 1fr; gap: calc(var(--gs-h) * 0.08);
+  padding: calc(var(--gs-h) * 0.12) 1.2vw calc(var(--gs-h) * 0.09);
+  background:
+    linear-gradient(180deg, #0b0c0d 0, #17191b 7%, #222528 14%, #1a1c1e 100%);
+  border-top: 1px solid #000;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+}
+/* padded coaming lip */
+#glareshield::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 9%;
+  background: linear-gradient(180deg, #2a2d30, #0d0e0f);
+  border-radius: 0 0 40% 40% / 0 0 100% 100%;
+}
+#glareshield .gs-unit {
+  position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  background: var(--panel-texture);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-panel), 0 0 0 1px var(--panel-edge);
+}
+#efis-l, #mcp { container-type: size; }
+
+#main-panel {
+  position: relative; flex: 1; min-height: 0;
+  background: var(--panel-texture);
+  border-top: 2px solid var(--panel-edge);
+  box-shadow: inset 0 10px 18px rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+}
+/* engraved panel seams */
+#main-panel::before, #main-panel::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(180deg, rgba(0,0,0,.6), rgba(0,0,0,.25));
+  box-shadow: 1px 0 0 rgba(255,255,255,.05);
+}
+#main-panel::before { left: 3vw; }
+#main-panel::after { right: 3vw; }
+
+.mp-row {
+  display: flex; align-items: center; gap: calc(var(--du) * 0.07);
+  height: 100%;
+}
+.du-bezel {
+  position: relative; flex: none;
+  width: calc(var(--du) + 2 * var(--du-bezel)); aspect-ratio: 1;
+  padding: var(--du-bezel);
+  background:
+    radial-gradient(circle at 50% 50%, var(--screw) 0 22%, #2b2f33 32%, transparent 38%) top 3% left 3% / calc(var(--du-bezel) * 0.85) calc(var(--du-bezel) * 0.85) no-repeat,
+    radial-gradient(circle at 50% 50%, var(--screw) 0 22%, #2b2f33 32%, transparent 38%) top 3% right 3% / calc(var(--du-bezel) * 0.85) calc(var(--du-bezel) * 0.85) no-repeat,
+    radial-gradient(circle at 50% 50%, var(--screw) 0 22%, #2b2f33 32%, transparent 38%) bottom 3% left 3% / calc(var(--du-bezel) * 0.85) calc(var(--du-bezel) * 0.85) no-repeat,
+    radial-gradient(circle at 50% 50%, var(--screw) 0 22%, #2b2f33 32%, transparent 38%) bottom 3% right 3% / calc(var(--du-bezel) * 0.85) calc(var(--du-bezel) * 0.85) no-repeat,
+    linear-gradient(145deg, #2a2d31, var(--bezel) 45%, #0c0d0e);
+  border-radius: calc(var(--du-bezel) * 0.6);
+  box-shadow: 0 0 0 1px #000, 0 3px 8px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.du-bezel--small { width: calc(var(--isfd) + 2 * var(--du-bezel)); padding: calc(var(--du-bezel) * 0.8); }
+.du {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  background: var(--glass);
+  box-shadow: inset 0 0 0 1px #050505, inset 0 0 calc(var(--du) * 0.04) rgba(0,0,0,.9);
+  container-type: size;
+}
+/* faint glass reflection on top of whatever the displays draw */
+.du::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.045) 0, rgba(255,255,255,0) 38%);
+}
+#pfd, #nd, #eicas { aspect-ratio: 1; }
+
+.mp-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--du) * 0.06); height: 100%;
+}
+.mp-placard {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: calc(var(--du) * 0.02) calc(var(--du) * 0.05);
+  border: 1px solid rgba(0,0,0,.6); border-radius: 2px;
+  background: linear-gradient(180deg, var(--panel-lo), var(--panel));
+  font-family: var(--font-legend); font-weight: 600; letter-spacing: .12em;
+  color: var(--legend); font-size: calc(var(--du) * 0.042);
+  text-shadow: 0 0 4px rgba(255,255,255,.25);
+}
+.mp-placard__sub { color: var(--legend-dim); font-size: .7em; letter-spacing: .08em; }
+
+/* ------------------------------------------------------------------ drawer dock */
+#drawer-dock {
+  position: fixed; left: 10px; bottom: calc(var(--ck-h) + 12px); z-index: 30;
+  display: flex; gap: 6px; pointer-events: auto;
+}
+#drawer-dock button {
+  min-width: 52px; height: 30px; padding: 0 10px;
+  font-family: var(--font-legend); font-weight: 600; font-size: 14px; letter-spacing: .1em;
+  color: var(--legend); background: var(--panel-texture);
+  border: 1px solid var(--panel-edge); border-radius: var(--radius-s);
+  box-shadow: var(--shadow-panel); cursor: pointer;
+  text-shadow: 0 0 5px rgba(255,255,255,.3);
+  position: relative;
+}
+#drawer-dock button::after { /* annunciator bar */
+  content: ''; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 2px; border-radius: 1px;
+  background: rgba(0,0,0,.55);
+}
+#drawer-dock button.on::after { background: var(--annun-on); box-shadow: 0 0 6px var(--annun-on); }
+#drawer-dock button:hover { filter: brightness(1.15); }
+body.panel-hidden #drawer-dock { bottom: 12px; }
+
+/* ------------------------------------------------------------------ drawers
+   (#app > prefix: wins over host classes other teams put on the drawer elements) */
+#app > .drawer {
+  position: fixed; z-index: 40; overflow: auto;
+  background: var(--panel-texture);
+  border: 1px solid var(--panel-edge);
+  box-shadow: 0 10px 40px rgba(0,0,0,.7), var(--shadow-panel);
+  transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s linear .28s;
+  visibility: hidden;
+  container-type: size;
+}
+#app > .drawer.open { visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s; }
+#app > .drawer--right {
+  top: 10px; right: 0; bottom: 10px; width: min(760px, 56vw);
+  border-right: 0; border-radius: var(--radius-m) 0 0 var(--radius-m);
+  transform: translateX(105%);
+}
+#app > .drawer--right.open { transform: none; }
+#app > .drawer--narrow { width: min(460px, 34vw); top: max(10px, calc(100vh - var(--ck-h) - min(660px, 70vh))); bottom: auto; height: min(660px, calc(100vh - 20px)); }
+#app > .drawer--square { width: min(520px, 48vw, calc(100vh - 20px)); height: min(520px, 48vw, calc(100vh - 20px)); bottom: auto; }
+#app > .drawer--bottom {
+  left: 50%; bottom: 0; width: min(980px, 74vw); height: min(64vh, 620px);
+  border-bottom: 0; border-radius: var(--radius-m) var(--radius-m) 0 0;
+  transform: translate(-50%, 105%);
+}
+#app > .drawer--bottom.open { transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------------ views */
+body.panel-hidden #glareshield,
+body.panel-hidden #main-panel,
+body.panel-hidden #cockpit::before { display: none; }
+
+#hud {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 20;
+  display: none; align-items: stretch; gap: 2px;
+  padding: 4px; border-radius: var(--radius-m);
+  background: var(--ui-bg); border: 1px solid var(--ui-line);
+  font-family: var(--font-avionics); color: var(--av-white);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  pointer-events: none;
+}
+body.panel-hidden #hud { display: flex; }
+body.menu-open #hud, body.booting #hud { display: none; }
+.hud-cell { display: grid; grid-template-rows: auto auto auto; justify-items: center; min-width: 78px; padding: 4px 10px; border-right: 1px solid var(--ui-line); }
+.hud-cell span { font-size: 10px; letter-spacing: .14em; color: var(--ui-muted); }
+.hud-cell b { font-family: var(--font-avionics-mono); font-size: 22px; line-height: 1.1; color: var(--av-green); font-weight: 400; }
+.hud-cell i { font-style: normal; font-size: 11px; color: var(--av-cyan); }
+.hud-cell i.warn { color: var(--av-amber); }
+.hud-fma { display: grid; grid-template-columns: repeat(2, auto); gap: 2px 10px; align-content: center; padding: 4px 10px; font-size: 13px; min-width: 150px; }
+.hud-fma b { color: var(--av-green); font-weight: 400; min-height: 1em; }
+.hud-flags { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 8px; font-size: 11px; }
+.hud-flags span { color: var(--av-white); }
+.hud-flags em { font-style: normal; }
+.hud-flags .red { color: var(--av-red); }
+.hud-flags .amber { color: var(--av-amber); }
+
+/* ------------------------------------------------------------------ toast */
+#toast {
+  position: fixed; left: 50%; top: 18px; z-index: 90;
+  transform: translate(-50%, -140%); opacity: 0;
+  padding: 9px 18px; border-radius: var(--radius-m);
+  background: var(--ui-bg); border: 1px solid var(--ui-line);
+  color: var(--ui-fg); font-family: var(--font-legend); font-size: 17px; letter-spacing: .06em; font-weight: 500;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+  transition: transform .25s ease, opacity .25s ease;
+  pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+/* while booting (menu up) hide the cockpit chrome */
+body.booting #cockpit, body.booting .drawer, body.booting #drawer-dock { display: none; }
+
+@media (max-aspect-ratio: 4/3) {
+  :root { --ck-h: min(42vh, 46vw); --du: min(calc(var(--mp-h) * 0.86), 20vw); }
+}
