@@ -157,6 +157,7 @@ function setupAtmosphere(viewer, q) {
   s.globe.dynamicAtmosphereLightingFromSun = true;
   s.globe.showGroundAtmosphere = true;
   if (s.skyAtmosphere) { s.skyAtmosphere.show = true; }
+  if (s.moon) s.moon.show = false; // reads as a dark speck in daylight
   s.fog.enabled = true;
   s.fog.density = 1.6e-4;
   s.fog.minimumBrightness = 0.04;

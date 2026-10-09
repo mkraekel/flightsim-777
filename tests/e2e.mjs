@@ -243,6 +243,7 @@ if (want(1) || want(2) || want(3) || want(6) || want(7)) {
     await shot(page, 'cdu-legs');
     await page.evaluate(() => document.activeElement?.blur());
     await page.keyboard.press('Digit3');
+    await run(page, 1);
     check(`CDU DIRECT TO ${wpt} executed`, await page.evaluate(() => !sim.fmc.mod && Math.abs(sim.fmc.xtkM) < 200), await page.evaluate(() => `xtk ${sim.fmc.xtkM.toFixed(0)} m, mod ${!!sim.fmc.mod}, scratch ${document.querySelector('#drawer-cdu .cdu-screen')?.lastChild?.textContent}`));
     await run(page, 150, 1 / 30, 1);
     s = await snap(page);
@@ -270,6 +271,8 @@ if (want(1) || want(2) || want(3) || want(6) || want(7)) {
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press('KeyC');
       await page.evaluate(() => sim.debug.renderAll(0.1));
+      // body classes are synced by the rAF loop (slow in headless): wait for it
+      await page.waitForFunction(() => document.body.classList.contains('view-' + sim.view.mode), null, { timeout: 20000 }).catch(() => {});
       modes.push(await page.evaluate(() => sim.view.mode + (document.body.classList.contains('view-' + sim.view.mode) ? '' : '!')));
       if (modes[i].startsWith('chase')) await shot(page, 'chase');
       if (modes[i].startsWith('flyby')) await shot(page, 'flyby');
@@ -298,9 +301,11 @@ if (want(1) || want(2) || want(3) || want(6) || want(7)) {
     await page.click('#drawer-dock [data-drawer="pedestal"]'); await wait(300);
     // V panel toggle
     await page.keyboard.press('KeyV'); await page.evaluate(() => sim.debug.renderAll(0));
+    await page.waitForFunction(() => document.body.classList.contains('panel-hidden'), null, { timeout: 20000 }).catch(() => {});
     check('V hides panel (HUD shown)', await page.evaluate(() => document.body.classList.contains('panel-hidden') && getComputedStyle(document.getElementById('hud')).display !== 'none'));
     await shot(page, 'cockpit-nopanel');
     await page.keyboard.press('KeyV');
+    await page.waitForFunction(() => !document.body.classList.contains('panel-hidden'), null, { timeout: 20000 }).catch(() => {});
     // Esc pause menu
     await page.evaluate(() => { sim.debug.freeze = false; });
     await page.keyboard.press('Escape'); await wait(800);

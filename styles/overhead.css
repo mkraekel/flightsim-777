@@ -19,7 +19,7 @@
 }
 .ohp-head {
   display: flex; align-items: center; gap: 12px;
-  margin: 0 2px 8px;
+  margin: 0 52px 8px 2px;     /* right: room for the drawer's close (✕) button */
   min-width: 0;
 }
 .ohp-head-title {
