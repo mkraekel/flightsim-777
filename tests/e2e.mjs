@@ -106,7 +106,8 @@ const shot = async (page, name) => {
   await page.evaluate((p) => { sim.debug.freeze = p; }, prev);
 };
 const finite = (o) => JSON.stringify(o).match(/null|NaN/) === null;
-const relevantErrors = (errs) => errs.filter((e) => !/favicon/.test(e));
+// third-party scenery tiles (ESRI/Bing) occasionally fail or lack CORS headers: not an app error
+const relevantErrors = (errs) => errs.filter((e) => !/favicon|arcgisonline|virtualearth|ERR_FAILED|ERR_TIMED_OUT|ERR_CONNECTION/.test(e));
 
 // ============================================================ 1+2+3+6+7: EDDF session
 if (want(1) || want(2) || want(3) || want(6) || want(7)) {
@@ -425,20 +426,20 @@ if (want(5)) {
   check('duct pressure from APU', await page.evaluate(() => sim.systems.air.ductPsi >= 20), await page.evaluate(() => `${sim.systems.air.ductPsi?.toFixed?.(0)} psi ${sim.systems.air.ductSrc}`));
   await shot(page, 'overhead-apu');
   for (const [i, side] of [[1, 'R'], [0, 'L']]) {
-    await page.keyboard.press('Digit1'); await wait(100);
-    if (!(await page.evaluate(() => document.getElementById('drawer-overhead').classList.contains('open')))) await page.keyboard.press('Digit1');
+    await page.evaluate(() => sim.ui.toggleDrawer('overhead', true)); await wait(100);
     const k = page.locator(`#drawer-overhead [role="slider"][aria-label="START ${side}"]`);
     await k.focus(); await page.keyboard.press('ArrowRight');
     await run(page, 1);
     check(`START ${side} selected -> STARTING`, await page.evaluate((j) => sim.engines[j].startState === 'STARTING', i), await page.evaluate((j) => sim.engines[j].startState, i));
     await run(page, 8, 1 / 15, 2);
-    await page.keyboard.press('Digit2'); await wait(400);
+    await page.evaluate(() => sim.ui.toggleDrawer('pedestal', true)); await wait(300);
     await page.click(`#drawer-pedestal [aria-label="Fuel control switch ${side}"]`);
     check(`fuel control ${side} RUN`, await page.evaluate((j) => sim.controls.fuelControl[j] === 'RUN', i));
     for (let t = 0; t < 10 && !(await page.evaluate((j) => sim.engines[j].startState === 'RUN', i)); t++) await run(page, 10, 1 / 15, 2);
     const e = await page.evaluate((j) => ({ s: sim.engines[j].startState, n2: sim.engines[j].n2, n1: sim.engines[j].n1, egt: sim.engines[j].egt }), i);
     check(`engine ${side} RUN`, e.s === 'RUN' && e.n2 > 50, JSON.stringify(e));
-    await page.keyboard.press('Digit2'); await wait(300);
+    if (side === 'R') await shot(page, 'pedestal-start');
+    await page.evaluate(() => sim.ui.toggleDrawer('pedestal', false));
   }
   await run(page, 20, 1 / 15, 2);
   const fin = await page.evaluate(() => ({ e: sim.engines.map((e) => [e.startState, +e.n1.toFixed(1), +e.n2.toFixed(1), Math.round(e.egt)]), gens: sim.systems.elec?.sources, ac: sim.ac.onGround && !sim.ac.crashed }));

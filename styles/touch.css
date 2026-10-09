@@ -13,6 +13,9 @@
   --tc-glass-hi: rgba(40, 45, 50, 0.62);
   --tc-edge: rgba(255, 255, 255, 0.16);
   --tc-top: calc(var(--tc-safe-t) + 8px);
+}
+/* geometry vars live on body so they resolve against the touch panel height below */
+body {
   /* bottom of the flight clusters: just above the instrument panel in cockpit view */
   --tc-base: calc(var(--ck-h) + 10px);
   /* outside-view height available above the panel */
@@ -20,6 +23,24 @@
   --tc-pad: clamp(132px, min(22vw, calc(var(--tc-avail) - var(--tc-btn-h) - var(--tc-gap) - 8px)), 240px);
   --tc-thr-h: calc(var(--tc-pad) + var(--tc-btn-h) + var(--tc-gap) - 44px);
 }
+/* touch layout: taller glareshield (EFIS/MCP readable), DUs stay about the same size.
+   Derived vars must be redefined here (custom properties inherit as computed values). */
+body.touch-ui {
+  --ck-h: min(48vh, 33vw);
+  --gs-h: calc(var(--ck-h) * 0.27);
+  --mp-h: calc(var(--ck-h) - var(--gs-h));
+  --du: min(calc(var(--mp-h) * 0.86), 21.5vw);
+  --du-bezel: calc(var(--du) * 0.055);
+  --isfd: calc(var(--du) * 0.44);
+}
+@media (max-aspect-ratio: 4/3) {
+  body.touch-ui { --ck-h: min(46vh, 50vw); --du: min(calc(var(--mp-h) * 0.86), 20vw); }
+}
+/* wider EFIS slot + one-row overlay buttons so the whole EFIS panel fits at iPad sizes */
+body.touch-ui #glareshield { grid-template-columns: 30% 1fr; }
+body.touch-ui #efis-l .efis { --s: clamp(26px, min(30cqh, 8.5cqw), 64px); row-gap: 2px; }
+body.touch-ui #efis-l .efis-ovl { flex-basis: 100%; grid-template-columns: repeat(7, auto); justify-content: center; gap: 4px; }
+body.touch-ui #efis-l .efis-btn { min-width: 0; }
 body.panel-hidden { --tc-base: calc(var(--tc-safe-b) + 86px); --tc-avail: calc(100dvh - 86px - var(--tc-top) - var(--tc-btn-h) - 22px); }
 
 /* ------------------------------------------------------------------ page guards (all devices) */
@@ -199,6 +220,7 @@ body.drawer-overhead-open #touch-ui .tc-bar--right, body.drawer-cdu-open #touch-
 @media (max-width: 1100px) {
   :root { --tc-gap: 6px; }
   .tc-btn { padding: 0 9px 4px; font-size: 14px; }
+  .tc-btn.tc-btn--sq { padding: 0 0 3px; font-size: 24px; }
   .tc-bar--right .tc-btn { min-width: 56px; }
   .tc-cfg { width: calc(2 * 68px + var(--tc-gap)); }
   body.touch-ui #drawer-dock button { min-width: 54px; padding: 0 8px; }
@@ -240,3 +262,5 @@ body.drawer-overhead-open #touch-ui .tc-bar--right, body.drawer-cdu-open #touch-
   #menu .mf-pair input[type="range"] { flex: 1 1 100%; }
   #menu .mf-pair .mf--range output { margin-left: auto; min-width: 80px; }
 }
+/* pedestal header has master lights at both ends: put its ✕ just right of the centred title */
+#app > #drawer-pedestal > .drawer-close { right: auto; left: calc(50% + 110px); }

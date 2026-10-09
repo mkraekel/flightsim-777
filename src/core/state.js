@@ -131,6 +131,6 @@ export function createSimState() {
     alerts: { list: [], masterWarning: false, masterCaution: false },
 
     // ---- owned by displays (EFIS control panel) ----
-    efis: { ndMode: 'MAP', ndRangeNm: 40, minimumsFt: 200, minsType: 'BARO', wxr: false, terr: false, tfc: true, sta: false, wpt: true, arpt: true, fpv: false, mtrs: false },
+    efis: { ndMode: 'MAP', ndRangeNm: 40, minimumsFt: 200, minsType: 'RADIO' /* RA 200 = CAT I DH, valid at any field elevation */, wxr: false, terr: false, tfc: true, sta: false, wpt: true, arpt: true, fpv: false, mtrs: false },
   };
 }
