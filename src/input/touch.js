@@ -69,7 +69,9 @@ export function initTouch(sim, rootEl, { call } = {}) {
 
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   const forced = /[?&]touch=1/.test(location.search);
-  if (coarse || forced) enableTouch();
+  // iPads with a trackpad/Magic Keyboard report a fine pointer, so also trust the touch-point count.
+  const touchScreen = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
+  if (coarse || forced || touchScreen) enableTouch();
   else window.addEventListener('touchstart', () => enableTouch(), { once: true, passive: true });
   // also enable on the first pointer event of type touch (pointer events without touch events)
   window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') enableTouch(); }, { passive: true });
